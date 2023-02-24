@@ -22,14 +22,16 @@ parser.add_argument("--skip", help="Skip processing existing entries in DB", act
 parser.add_argument("--convert-timeout", help="Timeout for the conversion in seconds, default is 5")
 parser.add_argument("--ray-timeout", help="Timeout for the miner-ray parser in seconds, default is 5")
 parser.add_argument("--max-count", help="Maximum amount of files to process, 0 means unlimited (default)")
+parser.add_argument("--id", help="Run for individual ID only")
 
 args=parser.parse_args()
 
 # Default values for arguments:
 SKIP = False
 CONVERT_TIMEOUT = 5
-RAY_TIMEOUT = 5
+RAY_TIMEOUT = 10
 MAX_COUNT = 0
+ONLY_ID = None
 
 # Check supplied arguments and possible overwrite default ones:
 if args.skip:
@@ -40,6 +42,8 @@ if args.ray_timeout != None:
     RAY_TIMEOUT = int(args.ray_timeout)
 if args.max_count != None:
     MAX_COUNT = int(args.max_count)
+if args.id != None:
+    ONLY_ID = args.id
 
 # --------- #
 # FUNCTIONS #
@@ -144,10 +148,15 @@ def processFile(id):
     # Delete the wat-file:
     os.remove(watFilePath)
 
-    # If resStatus indicates success (2) but data says it's an error, set resStatus to error
+    # If resStatus indicates success (2), check that it actually succeeded by looking at the data:
     if resStatus == 2:
-        if "error" in json.loads(data):
-            resStatus = 1 # set to error
+        try:
+            jsonData = json.loads(data)
+            if "error" in jsonData:
+                resStatus = 1 # set to error
+        except:
+            # We cannot even parse the json data, so set to error:
+            resStatus = 1
 
     dbCur.execute('UPDATE data SET ray_status=?, ray_time=? WHERE id=?', [resStatus, t, id])
     dbCon.commit()
@@ -174,6 +183,11 @@ listener = keyboard.Listener(on_press=handler)
 listener.start()
 
 createTable()
+
+if ONLY_ID != None:
+    print('Processing individual file...')
+    processFile(ONLY_ID)
+    exit(0)
 
 i = 0
 fileIndex = 0
