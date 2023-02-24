@@ -5,7 +5,7 @@ import timeit
 import subprocess
 
 # timeout in seconds
-TIMEOUT = 30
+TIMEOUT = 5
 
 # Format for res-data:
 # 1. auto_end | killed
@@ -16,25 +16,27 @@ def runCmd(cmd):
     return subprocess.run(cmd, stdout=subprocess.PIPE, timeout=TIMEOUT).stdout.decode('utf-8')
 
 parserLocation = "/home/gustav/kod/miner-ray.github.io/Parser/parser.js"
-samplesLocation = "/home/gustav/kod/samples-wasm-bench/chosen-wat"
-resDataLocation = "/home/gustav/kod/ray-runner/res-data"
+#samplesLocation = "/home/gustav/kod/dataset/wat-filtered"
+#resDataLocation = "./res-data"
+
+samplesLocation = "/home/gustav/kod/dataset/wat-wasm-evasion-selected"
+resDataLocation = "./res-data-wasm-evasion"
 
 i = 0
 
-for filename in os.listdir(samplesLocation):
-    f = os.path.join(samplesLocation, filename)
-    if not os.path.isfile(f):
+for sampleFilename in os.listdir(samplesLocation):
+    sampleFile = os.path.join(samplesLocation, sampleFilename)
+    if not os.path.isfile(sampleFile):
         continue
 
-    i += 1
+    dataFileName = os.path.splitext(sampleFilename)[0] + '.txt'
+    dataFile = os.path.join(resDataLocation, dataFileName)
 
-    dataF = os.path.splitext(f)[0] + '.txt'
-
-    if os.path.isfile(dataF):
-        print('Result file already exists for ' + f + ', skipping...')
+    if os.path.isfile(dataFile):
+        print('Result file already exists for ' + sampleFile + ', skipping...')
         continue
 
-    print(f)
+    print(sampleFile)
 
     # record start time
     t_0 = timeit.default_timer()
@@ -44,7 +46,7 @@ for filename in os.listdir(samplesLocation):
 
     # run miner-ray
     try:
-        res = runCmd(['node', parserLocation, '-f', f])
+        res = runCmd(['node', parserLocation, '-f', sampleFile])
     except subprocess.TimeoutExpired:
         exitType = 'killed'
 
@@ -54,12 +56,13 @@ for filename in os.listdir(samplesLocation):
 
     print(res)
 
-    resFile = open(dataF, "w")
-    resFile.write(exitType)
-    resFile.write(elapsed_time)
-    resFile.write(res)
+    resFile = open(dataFile, "w")
+    resFile.write(exitType + '\n')
+    resFile.write(str(elapsed_time) + '\n')
+    if res != None:
+        resFile.write(res + '\n')
     resFile.close()
 
     i += 1
-    if i == 3:
+    if i >= 35:
         break

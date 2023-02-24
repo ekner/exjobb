@@ -3,11 +3,23 @@
 import os
 import subprocess
 
-def runCmd(cmd):
-    return subprocess.run(cmd, stdout=subprocess.PIPE).stdout.decode('utf-8')
+# Format for meta-data:
+# 1. success | fail
+# 2. Time it took in seconds
+# 3. Output of command (if any). May be on several lines after this line as well.
 
-src = "/home/gustav/kod/samples-wasm-bench/chosen"
-dest = "/home/gustav/kod/samples-wasm-bench/chosen-wat"
+def runCmd(cmd):
+    tmp = subprocess.run(cmd, stdout=subprocess.PIPE)
+    tmp.check_returncode()
+    return tmp.stdout.decode('utf-8')
+
+src = "/home/gustav/kod/dataset/filtered"
+dest = "/home/gustav/kod/dataset/wat-filtered"
+
+#src = "/home/gustav/kod/dataset/wasm-evasion-selected"
+#dest = "/home/gustav/kod/dataset/wat-wasm-evasion-selected"
+
+#metaData = "./convertMetaData"
 
 i = 0
 
@@ -25,13 +37,22 @@ for filename in os.listdir(src):
         print("dest already exists!")
         continue
 
+    if filename != "6f688eecc5197f61a99ad766a162496bfdea6abc84742d1c417ba72b43a63534.wasm":
+        continue
+
+    print('File number ' + str(i))
     print('Source: ' + f)
     print('Dest: ' + destF)
-    res = runCmd(['wasm2wat', f])
+
+    res = ""
+    try:
+        res = runCmd(['wasm2wat', f])
+    except:
+        print("Exception!!!!!!")
     
     resFile = open(destF, "w")
     resFile.write(res)
     resFile.close()
     
-    if i == 100:
+    if i >= 1:
         break
