@@ -1,0 +1,1 @@
+SELECT * FROM data WHERE certain > 0 OR probable > 0 OR unlikely > 0;
