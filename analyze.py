@@ -5,8 +5,8 @@ import timeit
 import subprocess
 import sqlite3
 import argparse
-import sys
-import json 
+import json
+from pynput import keyboard
 
 # connect to db
 dbCon = sqlite3.connect("data.db")
@@ -21,6 +21,7 @@ parser=argparse.ArgumentParser()
 parser.add_argument("--skip", help="Skip processing existing entries in DB", action="store_true")
 parser.add_argument("--convert-timeout", help="Timeout for the conversion in seconds, default is 5")
 parser.add_argument("--ray-timeout", help="Timeout for the miner-ray parser in seconds, default is 5")
+parser.add_argument("--max-count", help="Maximum amount of files to process, 0 means unlimited (default)")
 
 args=parser.parse_args()
 
@@ -28,6 +29,7 @@ args=parser.parse_args()
 SKIP = False
 CONVERT_TIMEOUT = 5
 RAY_TIMEOUT = 5
+MAX_COUNT = 0
 
 # Check supplied arguments and possible overwrite default ones:
 if args.skip:
@@ -36,6 +38,8 @@ if args.convert_timeout != None:
     CONVERT_TIMEOUT = int(args.convert_timeout)
 if args.ray_timeout != None:
     RAY_TIMEOUT = int(args.ray_timeout)
+if args.max_count != None:
+    MAX_COUNT = int(args.max_count)
 
 # --------- #
 # FUNCTIONS #
@@ -103,8 +107,6 @@ def insertRayDataToDB(id, res):
     dbCon.commit()
 
 def processFile(id):
-    print(f"Processing {id}...")
-
     dbEntry = dbCur.execute('SELECT * FROM data WHERE id=?', [id])
     res = dbEntry.fetchone()
 
@@ -129,6 +131,8 @@ def processFile(id):
     if res[0] < 2:
         print(f"Conversion ended with timeout/error ({res[0]}).")
         return
+
+    print("Conversion ended with success")
     
     resFile = open(watFilePath, "w")
     resFile.write(res[2])
@@ -155,14 +159,25 @@ def processFile(id):
     insertRayDataToDB(id, data)
     print("Parsing ended with success")
 
+def handler(key):
+    global stopLoop
+    if key == keyboard.Key.esc:
+        stopLoop = True
+        print("Esc key pressed, will stop after this one...")
+        return False
 
 #
 # MAIN CODE
 #
 
+listener = keyboard.Listener(on_press=handler)
+listener.start()
+
 createTable()
 
 i = 0
+fileIndex = 0
+stopLoop = False
 
 for sampleFilename in os.listdir(samplesLocation):
     sampleFile = os.path.join(samplesLocation, sampleFilename)
@@ -170,11 +185,19 @@ for sampleFilename in os.listdir(samplesLocation):
     if not os.path.isfile(sampleFile):
         continue
 
+    fileIndex += 1
+
     id = os.path.splitext(sampleFilename)[0]
+
+    print(f"File: {fileIndex}, Scanned: {i}, Name: {id}")
 
     processFile(id)
 
     i += 1
 
-    if i >= 10:
+    if MAX_COUNT > 0 and i >= MAX_COUNT:
+        print("Stopped because max-count was reached")
+        break
+    if stopLoop:
+        print("Stopped because Esc was pressed")
         break
