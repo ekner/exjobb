@@ -29,7 +29,7 @@ args=parser.parse_args()
 # Default values for arguments:
 SKIP = False
 CONVERT_TIMEOUT = 5
-RAY_TIMEOUT = 10
+RAY_TIMEOUT = 20
 MAX_COUNT = 0
 ONLY_ID = None
 
