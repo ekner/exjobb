@@ -16,4 +16,5 @@ plt.bar(x, y2, color='#e6ad12', bottom=y1, label = 'False negatives')
 plt.bar(x, y3, color='Red', bottom=y1+y2, label = 'False positives')
 plt.legend(loc = 0, fontsize = 15)
 
-plt.show()
+# plt.show()
+plt.savefig('miner-ray.png')
