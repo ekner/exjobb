@@ -6,35 +6,35 @@ outFile = "obfuscated.wat"
 
 totLineWidth = 60
 
-#i32_0 = "$obfuscator_i32_0"
-#i32_1 = "$obfuscator_i32_1"
-#i64_0 = "$obfuscator_i64_0"
-#i64_1 = "$obfuscator_i64_1"
+i32_0 = "$obfuscator_i32_0"
+i32_1 = "$obfuscator_i32_1"
+i64_0 = "$obfuscator_i64_0"
+i64_1 = "$obfuscator_i64_1"
 
 #i32_0 = "(;100;)"
 #i32_1 = "(;101;)"
 #i64_0 = "(;102;)"
 #i64_1 = "(;103;)"
 
-i32_0 = "20"
-i32_1 = "21"
-i64_0 = "22"
-i64_1 = "23"
+#i32_0 = "120"
+#i32_1 = "121"
+#i64_0 = "122"
+#i64_1 = "123"
 
 def copyIndentation(s):
     return "".join(list(takewhile(lambda x : x == ' ', s)))
 
 def insertGlobals(lines):
-    regexLst = ['^\s*\(type', '^\s*\(import', '^\s*\(table', '^\s*\(memory']
+    regexLst = ['^\s*\(type', '^\s*\(import', '^\s*\(table', '^\s*\(memory', '^\s*\(global']
     largestLineNumber = 0
     for i in range(len(lines)):
         for elem in regexLst:
             if re.search(elem, lines[i]):
                 largestLineNumber = i
-    lines.insert(largestLineNumber + 1, f'(global (;{i32_0};) (mut i32) (i32.const 0))')
-    lines.insert(largestLineNumber + 1, f'(global (;{i32_1};) (mut i32) (i32.const 0))')
-    lines.insert(largestLineNumber + 1, f'(global (;{i64_0};) (mut i64) (i64.const 0))')
-    lines.insert(largestLineNumber + 1, f'(global (;{i64_1};) (mut i64) (i64.const 0))')
+    lines.insert(largestLineNumber + 1, f'(global {i32_0} (mut i32) (i32.const 0))')
+    lines.insert(largestLineNumber + 1, f'(global {i32_1} (mut i32) (i32.const 0))')
+    lines.insert(largestLineNumber + 1, f'(global {i64_0} (mut i64) (i64.const 0))')
+    lines.insert(largestLineNumber + 1, f'(global {i64_1} (mut i64) (i64.const 0))')
 
 def writeLines(f, lines, indent, comment):
     for line in lines:
@@ -291,8 +291,8 @@ insertGlobals(lines)
 with open(outFile, "w") as file:    
     for line in lines:
         obf = obfOpaque[0]
-        #if re.search(obf[0], line) and not re.search("[\(\)]", line):
-        if False:
+        if re.search(obf[0], line) and not re.search("[\(\)]", line):
+        #if False:
             indent = copyIndentation(line)
             writeLines(file, obf[1], indent, 'obfuscated')
             writeLines(file, [line], '', 'original')
