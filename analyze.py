@@ -13,8 +13,10 @@ dbCon = sqlite3.connect("data.db")
 dbCur = dbCon.cursor()
 
 parserLocation = "/home/gustav/kod/miner-ray.github.io/Parser/parser.js"
-samplesLocation = "/home/gustav/kod/dataset/filtered"
+#samplesLocation = "/home/gustav/kod/dataset/filtered"
+samplesLocation = "/home/gustav/kod/dataset/filtered-miners"
 tmpWatLocation = "./tmp-wat"
+obfuscatorPath = "/home/gustav/kod/exjobb/obfuscator.py"
 
 parser=argparse.ArgumentParser()
 
@@ -110,6 +112,21 @@ def insertRayDataToDB(id, res):
     dbCur.execute('UPDATE data SET data=?, certain=?, probable=?, unlikely=? WHERE id=?', values)
     dbCon.commit()
 
+def obfuscate(watFilePath, id):
+    obfuscations = ["d2"]
+    # har verifierat s1, o1, d1
+
+    for obf in obfuscations:
+        res = runCmd(['python3', obfuscatorPath, '--input', watFilePath, '--obf', obf], 20)
+        print(res)
+    
+    # Try to convert back to wasm
+    res = runCmd(['wat2wasm', watFilePath], 20)
+    print(res)
+
+    # Remove the leftoverfile from conversion:
+    os.remove(f"{id}.wasm")
+
 def processFile(id):
     dbEntry = dbCur.execute('SELECT * FROM data WHERE id=?', [id])
     res = dbEntry.fetchone()
@@ -141,6 +158,9 @@ def processFile(id):
     resFile = open(watFilePath, "w")
     resFile.write(res[2])
     resFile.close()
+
+    # Perform obfuscation (if it should be performed):
+    obfuscate(watFilePath, id)
 
     # Now, do the ray parsing:
     (resStatus, t, data) = runCmd(['node', parserLocation, '-f', watFilePath], RAY_TIMEOUT)

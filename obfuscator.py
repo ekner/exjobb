@@ -18,8 +18,12 @@ OBFUSCATION = ""
 # Check supplied arguments and possible overwrite default ones:
 if args.input != None:
     IN_FILE = args.input
+
 if args.output != None:
     OUT_FILE = args.output
+else:
+    OUT_FILE = IN_FILE
+
 if args.obf != None:
     OBFUSCATION = args.obf
 
@@ -50,10 +54,19 @@ def insertGlobals(lines):
         for elem in regexLst:
             if re.search(elem, lines[i]):
                 largestLineNumber = i
+
+    lastLine = False
+    if (largestLineNumber == len(lines) - 1):
+        lastLine = True
+        lines[largestLineNumber] = lines[largestLineNumber][0:-1]
+
     lines.insert(largestLineNumber + 1, f'(global {i32_0} (mut i32) (i32.const 0))')
     lines.insert(largestLineNumber + 1, f'(global {i32_1} (mut i32) (i32.const 0))')
     lines.insert(largestLineNumber + 1, f'(global {i64_0} (mut i64) (i64.const 0))')
     lines.insert(largestLineNumber + 1, f'(global {i64_1} (mut i64) (i64.const 0))')
+
+    if (lastLine):
+        lines.append(")")
 
 def writeLines(f, lines, indent, comment):
     for line in lines:
@@ -285,12 +298,12 @@ obfSub3 = [
         [],
         False,
         [
-            "global.set {i32_0}"
+            f"global.set {i32_0}",
             "i32.const -1",
             "i32.xor",
-            "global.get {i32_0}",
+            f"global.get {i32_0}",
             "i32.xor",
-            "global.get {i32_0}",
+            f"global.get {i32_0}",
             "i32.and"
         ]
     ),
@@ -300,12 +313,12 @@ obfSub3 = [
         [],
         False,
         [
-            "global.set {i64_0}"
+            f"global.set {i64_0}",
             "i64.const -1",
             "i64.xor",
-            "global.get {i64_0}",
+            f"global.get {i64_0}",
             "i64.xor",
-            "global.get {i64_0}",
+            f"global.get {i64_0}",
             "i64.and"
         ]
     )
@@ -318,13 +331,13 @@ obfSub4 = [
         [],
         False,
         [
-            "global.set {i32_0}",
-            "global.set {i32_1}",
-            "global.get {i32_0}",
-            "global.get {i32_1}",
+            f"global.set {i32_0}",
+            f"global.set {i32_1}",
+            f"global.get {i32_0}",
+            f"global.get {i32_1}",
             "i32.xor",
-            "global.get {i32_0}",
-            "global.get {i32_1}",
+            f"global.get {i32_0}",
+            f"global.get {i32_1}",
             "i32.and",
             "i32.or"
         ]
@@ -335,13 +348,13 @@ obfSub4 = [
         [],
         False,
         [
-            "global.set {i64_0}",
-            "global.set {i64_1}",
-            "global.get {i64_0}",
-            "global.get {i64_1}",
+            f"global.set {i64_0}",
+            f"global.set {i64_1}",
+            f"global.get {i64_0}",
+            f"global.get {i64_1}",
             "i64.xor",
-            "global.get {i64_0}",
-            "global.get {i64_1}",
+            f"global.get {i64_0}",
+            f"global.get {i64_1}",
             "i64.and",
             "i64.or"
         ]
@@ -355,17 +368,17 @@ obfSub5 = [
         [],
         False,
         [
-            "global.set {i32_0}",
-            "global.set {i32_1}",
-            "global.get {i32_0}",
+            f"global.set {i32_0}",
+            f"global.set {i32_1}",
+            f"global.get {i32_0}",
             "i32.const -1",
             "i32.xor",
-            "global.get {i32_1}",
+            f"global.get {i32_1}",
             "i32.and",
-            "global.get {i32_1}",
+            f"global.get {i32_1}",
             "i32.const -1",
             "i32.xor",
-            "global.get {i32_0}",
+            f"global.get {i32_0}",
             "i32.and",
             "i32.or"
         ]
@@ -376,17 +389,17 @@ obfSub5 = [
         [],
         False,
         [
-            "global.set {i64_0}",
-            "global.set {i64_1}",
-            "global.get {i64_0}",
+            f"global.set {i64_0}",
+            f"global.set {i64_1}",
+            f"global.get {i64_0}",
             "i64.const -1",
             "i64.xor",
-            "global.get {i64_1}",
+            f"global.get {i64_1}",
             "i64.and",
-            "global.get {i64_1}",
+            f"global.get {i64_1}",
             "i64.const -1",
             "i64.xor",
-            "global.get {i64_0}",
+            f"global.get {i64_0}",
             "i64.and",
             "i64.or"
         ]
@@ -422,7 +435,7 @@ with open(OUT_FILE, "w") as file:
                 replacementFound = True
                 indent = copyIndentation(line)
                 writeLines(file, obf[1], indent, 'obfuscated')
-                if obf[1]:
+                if obf[2]:
                     writeLines(file, [line], '', 'original')
                 writeLines(file, obf[3], indent, 'obfuscated')
                 break
