@@ -1,8 +1,27 @@
 from itertools import takewhile
 import re
+import argparse
 
-inFile  = "4cbdbbb1bc6880ecff2f1bc6cb66444b319cc57cf47e8a35f956c36f5bec2bbb.wat"
-outFile = "obfuscated.wat"
+parser=argparse.ArgumentParser()
+
+parser.add_argument("--input", help="Input file")
+parser.add_argument("--output", help="Output file")
+parser.add_argument("--obf", help="Obfuscation")
+
+args=parser.parse_args()
+
+# Default values for arguments:
+IN_FILE = ""
+OUT_FILE = ""
+OBFUSCATION = ""
+
+# Check supplied arguments and possible overwrite default ones:
+if args.input != None:
+    IN_FILE = args.input
+if args.output != None:
+    OUT_FILE = args.output
+if args.obf != None:
+    OBFUSCATION = args.obf
 
 totLineWidth = 60
 
@@ -231,7 +250,10 @@ obfSub1 = [
             "i64.mul",
             "i64.sub"
         ]
-    ),
+    )
+]
+
+obfSub2 = [
     # i32 sub
     (
         "^\s*i32\.sub",
@@ -253,49 +275,156 @@ obfSub1 = [
             "i64.mul",
             "i64.add"
         ]
-    ),
+    )
 ]
 
-obfSub2 = [
+obfSub3 = [
     # i32
     (
-        "^\s*i32\.sub",
+        "^\s*i32\.and",
         [],
         False,
         [
+            "global.set {i32_0}"
             "i32.const -1",
-            "i32.mul",
-            "i32.add"
+            "i32.xor",
+            "global.get {i32_0}",
+            "i32.xor",
+            "global.get {i32_0}",
+            "i32.and"
         ]
     ),
     # i64
     (
-        "^\s*i64\.sub",
+        "^\s*i64\.and",
         [],
         False,
         [
+            "global.set {i64_0}"
             "i64.const -1",
-            "i64.mul",
-            "i64.add"
+            "i64.xor",
+            "global.get {i64_0}",
+            "i64.xor",
+            "global.get {i64_0}",
+            "i64.and"
+        ]
+    )
+]
+
+obfSub4 = [
+    # i32
+    (
+        "^\s*i32\.or",
+        [],
+        False,
+        [
+            "global.set {i32_0}",
+            "global.set {i32_1}",
+            "global.get {i32_0}",
+            "global.get {i32_1}",
+            "i32.xor",
+            "global.get {i32_0}",
+            "global.get {i32_1}",
+            "i32.and",
+            "i32.or"
+        ]
+    ),
+    # i64
+    (
+        "^\s*i64\.or",
+        [],
+        False,
+        [
+            "global.set {i64_0}",
+            "global.set {i64_1}",
+            "global.get {i64_0}",
+            "global.get {i64_1}",
+            "i64.xor",
+            "global.get {i64_0}",
+            "global.get {i64_1}",
+            "i64.and",
+            "i64.or"
+        ]
+    )
+]
+
+obfSub5 = [
+    # i32
+    (
+        "^\s*i32\.xor",
+        [],
+        False,
+        [
+            "global.set {i32_0}",
+            "global.set {i32_1}",
+            "global.get {i32_0}",
+            "i32.const -1",
+            "i32.xor",
+            "global.get {i32_1}",
+            "i32.and",
+            "global.get {i32_1}",
+            "i32.const -1",
+            "i32.xor",
+            "global.get {i32_0}",
+            "i32.and",
+            "i32.or"
+        ]
+    ),
+    # i64
+    (
+        "^\s*i64\.xor",
+        [],
+        False,
+        [
+            "global.set {i64_0}",
+            "global.set {i64_1}",
+            "global.get {i64_0}",
+            "i64.const -1",
+            "i64.xor",
+            "global.get {i64_1}",
+            "i64.and",
+            "global.get {i64_1}",
+            "i64.const -1",
+            "i64.xor",
+            "global.get {i64_0}",
+            "i64.and",
+            "i64.or"
         ]
     ),
 ]
 
+subMap = {
+    "d1": obfDead1,
+    "d2": obfDead2,
+    "d3": obfDead3,
+    "d4": obfDead4,
+    "o1": obfOpaque,
+    "s1": obfSub1,
+    "s2": obfSub2,
+    "s3": obfSub3,
+    "s4": obfSub4,
+    "s5": obfSub5,
+    "as": obfSub1 + obfSub2 + obfSub3 + obfSub4 + obfSub5
+}
+
 lines = []
 
-with open(inFile) as file:
+with open(IN_FILE) as file:
     lines = [line.rstrip() for line in file]
 
 insertGlobals(lines)
 
-with open(outFile, "w") as file:    
+with open(OUT_FILE, "w") as file:    
     for line in lines:
-        obf = obfOpaque[0]
-        if re.search(obf[0], line) and not re.search("[\(\)]", line):
-        #if False:
-            indent = copyIndentation(line)
-            writeLines(file, obf[1], indent, 'obfuscated')
-            writeLines(file, [line], '', 'original')
-            writeLines(file, obf[3], indent, 'obfuscated')
-        else:
-            file.write(f"{line}\n")
+        replacementFound = False
+        for obf in subMap[OBFUSCATION]:
+            if re.search(obf[0], line) and not re.search("[\(\)]", line):
+                replacementFound = True
+                indent = copyIndentation(line)
+                writeLines(file, obf[1], indent, 'obfuscated')
+                if obf[1]:
+                    writeLines(file, [line], '', 'original')
+                writeLines(file, obf[3], indent, 'obfuscated')
+                break
+        if not replacementFound:
+            file.write(f"{line}\n")                
