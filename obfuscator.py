@@ -1,31 +1,31 @@
 from itertools import takewhile
 import re
-import argparse
+#import argparse
 
-parser=argparse.ArgumentParser()
+#parser=argparse.ArgumentParser()
 
-parser.add_argument("--input", help="Input file")
-parser.add_argument("--output", help="Output file")
-parser.add_argument("--obf", help="Obfuscation")
+#parser.add_argument("--input", help="Input file")
+#parser.add_argument("--output", help="Output file")
+#parser.add_argument("--obf", help="Obfuscation")
 
-args=parser.parse_args()
+#args=parser.parse_args()
 
 # Default values for arguments:
-IN_FILE = ""
-OUT_FILE = ""
-OBFUSCATION = ""
+#IN_FILE = ""
+#OUT_FILE = ""
+#OBFUSCATION = ""
 
 # Check supplied arguments and possible overwrite default ones:
-if args.input != None:
-    IN_FILE = args.input
+#if args.input != None:
+#    IN_FILE = args.input
 
-if args.output != None:
-    OUT_FILE = args.output
-else:
-    OUT_FILE = IN_FILE
+#if args.output != None:
+#    OUT_FILE = args.output
+#else:
+#    OUT_FILE = IN_FILE
 
-if args.obf != None:
-    OBFUSCATION = args.obf
+#if args.obf != None:
+#    OBFUSCATION = args.obf
 
 totLineWidth = 60
 
@@ -47,7 +47,7 @@ i64_1 = "$obfuscator_i64_1"
 def copyIndentation(s):
     return "".join(list(takewhile(lambda x : x == ' ', s)))
 
-def insertGlobals(lines):
+def insertGlobals(lines, statistics):
     regexLst = ['^\s*\(type', '^\s*\(import', '^\s*\(table', '^\s*\(memory', '^\s*\(global']
     largestLineNumber = 0
     for i in range(len(lines)):
@@ -65,10 +65,13 @@ def insertGlobals(lines):
     lines.insert(largestLineNumber + 1, f'(global {i64_0} (mut i64) (i64.const 0))')
     lines.insert(largestLineNumber + 1, f'(global {i64_1} (mut i64) (i64.const 0))')
 
+    statistics["linesAdded"] += 4
+
     if (lastLine):
         lines.append(")")
+        statistics["linesAdded"] += 1
 
-def writeLines(f, lines, indent, comment):
+def writeLines(file, lines, indent, comment):
     for line in lines:
         startLine = f"{indent}{line}"
         spaces = max(totLineWidth - len(startLine), 1) * ' '
@@ -80,7 +83,127 @@ def writeLines(f, lines, indent, comment):
 #                                 #
 ###################################
 
-obfOpaque = [
+obfOpaque1 = [
+    # Saker som tar i32 som parameter och returnerar i32:
+    (
+        "^\s*i32\.(add|sub|mul|div_u|div_s|rem_u|rem_s|and|or|xor|shl|shr_u|shr_s|rotl|rotr|eq[^z]|ne|lt_u|lt_s|gt_u|gt_s|le_u|le_s|ge_u|ge_s)",
+        [
+            f"global.set {i32_0}",
+            f"global.set {i32_1}",
+            "i32.const 1",
+            "if (result i32)",
+            f"global.get {i32_1}",
+            f"global.get {i32_0}",
+        ],
+        True,
+        [
+            "else",
+            "i32.const 42",
+            "end"
+        ]
+    ),
+    # Saker som tar i64 som parameter och returnerar i32:
+    (
+        "^\s*i64\.(eq[^z]|ne|lt_u|lt_s|gt_u|gt_s|le_u|le_s|ge_u|ge_s)",
+        [
+            f"global.set {i64_0}",
+            f"global.set {i64_1}",
+            "i32.const 1",
+            "if (result i32)",
+            f"global.get {i64_1}",
+            f"global.get {i64_0}",
+        ],
+        True,
+        [
+            "else",
+            "i32.const 42",
+            "end"
+        ]
+    ),
+    # Saker som tar i64 som parameter och returnerar i64:
+    (
+        "^\s*i64\.(add|sub|mul|div_u|div_s|rem_u|rem_s|and|or|xor|shl|shr_u|shr_s|rotl|rotr)",
+        [
+            f"global.set {i64_0}",
+            f"global.set {i64_1}",
+            "i32.const 1",
+            "if (result i64)",
+            f"global.get {i64_1}",
+            f"global.get {i64_0}",
+        ],
+        True,
+        [
+            "else",
+            "i64.const 42",
+            "end"
+        ]
+    )
+]
+
+obfOpaque2 = [
+    # Saker som tar i32 som parameter och returnerar i32:
+    (
+        "^\s*i32\.(add|sub|mul|div_u|div_s|rem_u|rem_s|and|or|xor|shl|shr_u|shr_s|rotl|rotr|eq[^z]|ne|lt_u|lt_s|gt_u|gt_s|le_u|le_s|ge_u|ge_s)",
+        [
+            f"global.set {i32_0}",
+            f"global.set {i32_1}",
+            "i32.const 1",
+            "i32.const 1",
+            "i32.eq",
+            "if (result i32)",
+            f"global.get {i32_1}",
+            f"global.get {i32_0}",
+        ],
+        True,
+        [
+            "else",
+            "i32.const 42",
+            "end"
+        ]
+    ),
+    # Saker som tar i64 som parameter och returnerar i32:
+    (
+        "^\s*i64\.(eq[^z]|ne|lt_u|lt_s|gt_u|gt_s|le_u|le_s|ge_u|ge_s)",
+        [
+            f"global.set {i64_0}",
+            f"global.set {i64_1}",
+            "i32.const 1",
+            "i32.const 1",
+            "i32.eq",
+            "if (result i32)",
+            f"global.get {i64_1}",
+            f"global.get {i64_0}",
+        ],
+        True,
+        [
+            "else",
+            "i32.const 42",
+            "end"
+        ]
+    ),
+    # Saker som tar i64 som parameter och returnerar i64:
+    (
+        "^\s*i64\.(add|sub|mul|div_u|div_s|rem_u|rem_s|and|or|xor|shl|shr_u|shr_s|rotl|rotr)",
+        [
+            f"global.set {i64_0}",
+            f"global.set {i64_1}",
+            "i32.const 1",
+            "i32.const 1",
+            "i32.eq",
+            "if (result i64)",
+            f"global.get {i64_1}",
+            f"global.get {i64_0}",
+        ],
+        True,
+        [
+            "else",
+            "i64.const 42",
+            "end"
+        ]
+    )
+]
+
+obfOpaque3 = [
     # Saker som tar i32 som parameter och returnerar i32:
     (
         "^\s*i32\.(add|sub|mul|div_u|div_s|rem_u|rem_s|and|or|xor|shl|shr_u|shr_s|rotl|rotr|eq[^z]|ne|lt_u|lt_s|gt_u|gt_s|le_u|le_s|ge_u|ge_s)",
@@ -411,7 +534,9 @@ subMap = {
     "d2": obfDead2,
     "d3": obfDead3,
     "d4": obfDead4,
-    "o1": obfOpaque,
+    "o1": obfOpaque1,
+    "o2": obfOpaque2,
+    "o3": obfOpaque3,
     "s1": obfSub1,
     "s2": obfSub2,
     "s3": obfSub3,
@@ -420,24 +545,43 @@ subMap = {
     "as": obfSub1 + obfSub2 + obfSub3 + obfSub4 + obfSub5
 }
 
-lines = []
+# Perform obfuscation for a certain LINE in a file:
+def performObfuscation(line, file, obfuscation, statistics):
+    replacementFound = False
+    for obf in subMap[obfuscation]:
+        if re.search(obf[0], line) and not re.search("[\(\)]", line):
+            replacementFound = True
+            indent = copyIndentation(line)
+            writeLines(file, obf[1], indent, 'obfuscated')
+            if obf[2]:
+                writeLines(file, [line], '', 'original')
+            else:
+                statistics["linesRemoved"] += 1
+            writeLines(file, obf[3], indent, 'obfuscated')
+            statistics["linesAdded"] += len(obf[1]) + len(obf[3])
+            break
+    if not replacementFound:
+        file.write(f"{line}\n")  
 
-with open(IN_FILE) as file:
-    lines = [line.rstrip() for line in file]
+# Perform obfuscation/s for a whole file:
+def obfuscateFile(inOutFile, obfuscations):
+    statistics = {
+        "linesRemoved": 0,
+        "linesAdded": 0,
+        "linesBefore": None
+    }
 
-insertGlobals(lines)
+    for obfuscation in obfuscations:
+        lines = []
+    
+        with open(inOutFile) as file:
+            lines = [line.rstrip() for line in file]
 
-with open(OUT_FILE, "w") as file:    
-    for line in lines:
-        replacementFound = False
-        for obf in subMap[OBFUSCATION]:
-            if re.search(obf[0], line) and not re.search("[\(\)]", line):
-                replacementFound = True
-                indent = copyIndentation(line)
-                writeLines(file, obf[1], indent, 'obfuscated')
-                if obf[2]:
-                    writeLines(file, [line], '', 'original')
-                writeLines(file, obf[3], indent, 'obfuscated')
-                break
-        if not replacementFound:
-            file.write(f"{line}\n")                
+        statistics["linesBefore"] = len(lines)
+        insertGlobals(lines, statistics)
+
+        with open(inOutFile, "w") as file:
+            for line in lines:
+                performObfuscation(line, file, obfuscation, statistics)
+    
+    return statistics

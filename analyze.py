@@ -6,6 +6,7 @@ import subprocess
 import sqlite3
 import argparse
 import json
+from obfuscator import obfuscateFile
 from pynput import keyboard
 
 # connect to db
@@ -21,15 +22,15 @@ obfuscatorPath = "/home/gustav/kod/exjobb/obfuscator.py"
 parser=argparse.ArgumentParser()
 
 parser.add_argument("--skip", help="Skip processing existing entries in DB", action="store_true")
-parser.add_argument("--convert-timeout", help="Timeout for the conversion in seconds, default is 5")
-parser.add_argument("--ray-timeout", help="Timeout for the miner-ray parser in seconds, default is 5")
+parser.add_argument("--convert-timeout", help="Timeout for the conversion in seconds")
+parser.add_argument("--ray-timeout", help="Timeout for the miner-ray parser in seconds")
 parser.add_argument("--max-count", help="Maximum amount of files to process, 0 means unlimited (default)")
 parser.add_argument("--id", help="Run for individual ID only")
 
 args=parser.parse_args()
 
 # Default values for arguments:
-SKIP = False
+SKIP = True
 CONVERT_TIMEOUT = 5
 RAY_TIMEOUT = 20
 MAX_COUNT = 0
@@ -46,6 +47,9 @@ if args.max_count != None:
     MAX_COUNT = int(args.max_count)
 if args.id != None:
     ONLY_ID = args.id
+
+# Constants:
+obfuscations = ["o3"]
 
 # --------- #
 # FUNCTIONS #
@@ -89,7 +93,12 @@ def createTable():
         data            TEXT,
         certain         INTEGER,
         probable        INTEGER,
-        unlikely        INTEGER
+        unlikely        INTEGER,
+        linesAdded      INTEGER,
+        linesRemoved    INTEGER,
+        linesBefore     INTEGER,
+        newFileSize     INTEGER,
+        oldFileSize     INTEGER
     );"""
     res = dbCur.execute(sql)
     print(res)
@@ -113,19 +122,30 @@ def insertRayDataToDB(id, res):
     dbCon.commit()
 
 def obfuscate(watFilePath, id):
-    obfuscations = ["d2"]
-    # har verifierat s1, o1, d1
-
-    for obf in obfuscations:
-        res = runCmd(['python3', obfuscatorPath, '--input', watFilePath, '--obf', obf], 20)
-        print(res)
-    
-    # Try to convert back to wasm
+    # Convert to wasm before obfuscation to get file size. We cannot read the original wasm file size because
+    # it might be larger, so we have to go Wasm -> Wat -> Wasm first.
     res = runCmd(['wat2wasm', watFilePath], 20)
-    print(res)
+    fileSize = os.stat(f"{id}.wasm").st_size
+    dbCur.execute('UPDATE data SET oldFileSize=? WHERE id=?', [fileSize, id])
+    dbCon.commit()
+
+    # Perform the obfuscations:
+    stat = obfuscateFile(watFilePath, obfuscations)
+    
+    # Try to convert back to wasm:
+    res = runCmd(['wat2wasm', watFilePath], 20)
+    print("Convert back to wasm: " + str(res))
+
+    # Get file size:
+    fileSize = os.stat(f"{id}.wasm").st_size
 
     # Remove the leftoverfile from conversion:
     os.remove(f"{id}.wasm")
+
+    # Store results in DB:
+    dbCur.execute('UPDATE data SET linesAdded=?, linesRemoved=?, linesBefore=?, newFileSize=? WHERE id=?',
+                  [stat["linesAdded"], stat["linesRemoved"], stat["linesBefore"], fileSize, id])
+    dbCon.commit()
 
 def processFile(id):
     dbEntry = dbCur.execute('SELECT * FROM data WHERE id=?', [id])
@@ -145,6 +165,7 @@ def processFile(id):
     watFileName = f"{id}.wat"
     watFilePath = os.path.join(tmpWatLocation, watFileName)
    
+    # Convert the file and store the results:
     res = runCmd(['wasm2wat', wasmFilePath], CONVERT_TIMEOUT)
     dbCur.execute('UPDATE data SET convert_status=?, convert_time=? WHERE id=?', [res[0], res[1], id])
     dbCon.commit()
