@@ -551,6 +551,7 @@ def performObfuscation(line, file, obfuscation, statistics):
     for obf in subMap[obfuscation]:
         if re.search(obf[0], line) and not re.search("[\(\)]", line):
             replacementFound = True
+            statistics["matches"] += 1
             indent = copyIndentation(line)
             writeLines(file, obf[1], indent, 'obfuscated')
             if obf[2]:
@@ -568,7 +569,8 @@ def obfuscateFile(inOutFile, obfuscations):
     statistics = {
         "linesRemoved": 0,
         "linesAdded": 0,
-        "linesBefore": None
+        "linesBefore": None,
+        "matches": 0
     }
 
     for obfuscation in obfuscations:

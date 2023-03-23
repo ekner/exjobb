@@ -98,7 +98,8 @@ def createTable():
         linesRemoved    INTEGER,
         linesBefore     INTEGER,
         newFileSize     INTEGER,
-        oldFileSize     INTEGER
+        oldFileSize     INTEGER,
+        matches         INTEGER
     );"""
     res = dbCur.execute(sql)
     print(res)
@@ -143,8 +144,8 @@ def obfuscate(watFilePath, id):
     os.remove(f"{id}.wasm")
 
     # Store results in DB:
-    dbCur.execute('UPDATE data SET linesAdded=?, linesRemoved=?, linesBefore=?, newFileSize=? WHERE id=?',
-                  [stat["linesAdded"], stat["linesRemoved"], stat["linesBefore"], fileSize, id])
+    dbCur.execute('UPDATE data SET linesAdded=?, linesRemoved=?, linesBefore=?, matches=?, newFileSize=? WHERE id=?',
+                  [stat["linesAdded"], stat["linesRemoved"], stat["linesBefore"], stat["matches"], fileSize, id])
     dbCon.commit()
 
 def processFile(id):
