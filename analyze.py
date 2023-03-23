@@ -49,7 +49,7 @@ if args.id != None:
     ONLY_ID = args.id
 
 # Constants:
-obfuscations = ["o3"]
+obfuscations = ["s2345"]
 
 # --------- #
 # FUNCTIONS #

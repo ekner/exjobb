@@ -1,5 +1,6 @@
 from itertools import takewhile
 import re
+import functools
 #import argparse
 
 #parser=argparse.ArgumentParser()
@@ -541,14 +542,20 @@ subMap = {
     "s2": obfSub2,
     "s3": obfSub3,
     "s4": obfSub4,
-    "s5": obfSub5,
-    "as": obfSub1 + obfSub2 + obfSub3 + obfSub4 + obfSub5
+    "s5": obfSub5
 }
+
+def strToObf(s):
+    obfType = s[0]
+    numbers = s[1:]
+    return list(functools.reduce(lambda acc, x: acc + subMap[obfType + x], numbers, []))
 
 # Perform obfuscation for a certain LINE in a file:
 def performObfuscation(line, file, obfuscation, statistics):
     replacementFound = False
-    for obf in subMap[obfuscation]:
+    obfuscations = strToObf(obfuscation)
+
+    for obf in obfuscations:
         if re.search(obf[0], line) and not re.search("[\(\)]", line):
             replacementFound = True
             statistics["matches"] += 1
