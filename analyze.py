@@ -49,9 +49,7 @@ if args.id != None:
     ONLY_ID = args.id
 
 # Constants:
-# den senaste jag körde:
-obfuscations = ["s1235"]
-# nu är det s1234 kvar
+obfuscations = ["s245"]
 
 # --------- #
 # FUNCTIONS #
