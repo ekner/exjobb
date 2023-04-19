@@ -15,7 +15,8 @@ dbCur = dbCon.cursor()
 
 parserLocation = "/home/gustav/kod/miner-ray.github.io/Parser/parser.js"
 #samplesLocation = "/home/gustav/kod/dataset/filtered"
-samplesLocation = "/home/gustav/kod/dataset/filtered-miners"
+#samplesLocation = "/home/gustav/kod/dataset/filtered-miners"
+samplesLocation = "/home/gustav/kod/dataset/non-miners-213"
 tmpWatLocation = "./tmp-wat"
 obfuscatorPath = "/home/gustav/kod/exjobb/obfuscator.py"
 
@@ -49,7 +50,7 @@ if args.id != None:
     ONLY_ID = args.id
 
 # Constants:
-obfuscations = ["o3"]
+obfuscations = ["s5"]
 
 # --------- #
 # FUNCTIONS #
