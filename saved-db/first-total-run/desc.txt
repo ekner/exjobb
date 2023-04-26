@@ -1,5 +1,0 @@
-Have run on all filtered samples, un-obfuscated (raw files).
-Parameters:
-CONVERT_TIMEOUT = 5
-RAY_TIMEOUT = 20
-Resulted in a bit above 200 samples that were detected to have some kind of cryptominer.
