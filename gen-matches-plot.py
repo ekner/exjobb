@@ -1,16 +1,12 @@
 #!/usr/bin/python3
 
 import sqlite3
-import csv
+import matplotlib.pyplot as plt
 
 originalData = {}
 
-csvfile = open("data.csv", 'w', newline='')
-csvWriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-csvWriter.writerow(['obfuscation', 'convstop', 'raystop', 'certain', 'probable', 'unlikely', 'nominer', 'raytime',
-                        'linesadded', 'linesremoved',
-                        'newfilesize', 'matches', 'averagelinesdiff', 'averagesizediff', 'averageraytimediff',
-                        'avgmatchesshare'])
+x = [] # Matches share
+y = [] # No miner
 
 def getOriginalData():
     dbCon = sqlite3.connect(f"saved-db/0.db")
@@ -18,18 +14,11 @@ def getOriginalData():
     res = dbCur.execute("SELECT AVG(ray_time) as ray_time FROM data WHERE ray_status = 2")
     originalData["rayTime"] = res.fetchone()[0]
 
-
 def getFromDb(dbFile):
     data = {}
 
     dbCon = sqlite3.connect(f"saved-db/{dbFile}.db")
     dbCur = dbCon.cursor()
-
-    res = dbCur.execute("SELECT COUNT(id) as cnt FROM data WHERE convert_status != 2")
-    data["convstop"] = res.fetchone()[0]
-
-    res = dbCur.execute("SELECT COUNT(id) as cnt FROM data WHERE ray_status != 2")
-    data["raystop"] = res.fetchone()[0]
 
     res = dbCur.execute("SELECT COUNT(id) as cnt FROM data WHERE certain > 0")
     data["certain"] = res.fetchone()[0]
@@ -65,32 +54,14 @@ def getFromDb(dbFile):
     data["averagesizediff"] = (data["newfilesize"] - oldFileSize) / oldFileSize * 100
     data["averageraytimediff"] = (data["raytime"] - originalData["rayTime"]) / originalData["rayTime"] * 100
 
-    # Do final tweaks to the data:
-    obfName = "$" + dbFile + "$"
-    if len(dbFile) > 1:
-        obfName = "$" + dbFile[2].upper() + "_{" + dbFile[3] + "}$"
-    data["raytime"] = str(round(data["raytime"] * 1000)) + " ms"
-    if len(data["raytime"]) == 7:
-        data["raytime"] = data["raytime"][0] + " " + data["raytime"][1:]
-    data["linesadded"] = str(round(data["linesadded"], 1))
-    data["linesremoved"] = str(round(data["linesremoved"], 1))
-    data["newfilesize"] = str(round(data["newfilesize"] / 1000.0, 1)) + " KB"
-    data["matches"] = str(round(data["matches"], 1))
-    data["averagelinesdiff"] = str(round(data["averagelinesdiff"], 1)) + "\\%"
-    data["averagesizediff"] = str(round(data["averagesizediff"], 1)) + "\\%"
-    data["averageraytimediff"] = str(round(data["averageraytimediff"], 1)) + "\\%"
-    data["avgmatchesshare"] = str(round(data["avgmatchesshare"] * 100, 1)) + "\\%"
-
-    # Write data to csv:
-    csvWriter.writerow([obfName, data["convstop"], data["raystop"], data["certain"], data["probable"], data["unlikely"], data["nominer"], data["raytime"],
-                        data["linesadded"], data["linesremoved"], data["newfilesize"], data["matches"], data["averagelinesdiff"], data["averagesizediff"],
-                        data['averageraytimediff'], data['avgmatchesshare']])
-
+    data["avgmatchesshare"] = data["avgmatchesshare"] * 100
     dbCon.close()
+
+    x.append(data["avgmatchesshare"])
+    y.append(data["nominer"])
 
 getOriginalData()
 
-'''
 getFromDb("d/d1")
 getFromDb("d/d2")
 getFromDb("d/d3")
@@ -103,7 +74,7 @@ getFromDb("s/s2")
 getFromDb("s/s3")
 getFromDb("s/s4")
 getFromDb("s/s5")
-'''
+plt.plot(x, y, 'rx')
 
 lst = [
     12,
@@ -130,21 +101,46 @@ lst = [
     1235,
     1245,
     1345,
-    2345,
+    #2345,
     12345
 ]
-
+x = []
+y = []
 for i in range(len(lst)):
     s = "s/s" + str(lst[i])
-    #getFromDb(s)
+    getFromDb(s)
+plt.plot(x, y, 'rx')
 
+x = []
+y = []
+getFromDb("s/s2345")
+plt.plot(x, y, 'ro')
+
+x = []
+y = []
 getFromDb("d/d1_3div14")
 getFromDb("d/d2_3div14")
 getFromDb("d/d3_3div14")
 getFromDb("d/d4_3div14")
+plt.plot(x, y, 'bx')
+
+x = []
+y = []
 getFromDb("o/o1_3div14")
 getFromDb("o/o2_3div14")
 getFromDb("o/o3_3div14")
-getFromDb("s/s1_1div2")
+plt.plot(x, y, 'bx')
 
-csvfile.close()
+x = []
+y = []
+getFromDb("s/s1_1div2")
+plt.plot(x, y, 'bx')
+
+plt.xlabel("Match ratio (%)")
+plt.ylabel("\"None\" category")
+
+plt.axis([0, 15, 0, 223])
+#plt.show()
+
+plt.savefig(f'matches-plot.pdf')
+plt.figure().clear()

@@ -1,6 +1,8 @@
 from itertools import takewhile
 import re
 import functools
+import random
+from datetime import datetime
 #import argparse
 
 #parser=argparse.ArgumentParser()
@@ -555,19 +557,25 @@ def performObfuscation(line, file, obfuscation, statistics):
     replacementFound = False
     obfuscations = strToObf(obfuscation)
 
-    for obf in obfuscations:
-        if re.search(obf[0], line) and not re.search("[\(\)]", line):
-            replacementFound = True
-            statistics["matches"] += 1
-            indent = copyIndentation(line)
-            writeLines(file, obf[1], indent, 'obfuscated')
-            if obf[2]:
-                writeLines(file, [line], '', 'original')
-            else:
-                statistics["linesRemoved"] += 1
-            writeLines(file, obf[3], indent, 'obfuscated')
-            statistics["linesAdded"] += len(obf[1]) + len(obf[3])
-            break
+    random.seed(datetime.now().timestamp())
+    #shouldObfuscate = random.random() < 3.0 / 14.0
+    shouldObfuscate = random.random() < 1.0 / 2.0
+    #print(f"Should obfuscate: {shouldObfuscate}")
+
+    if shouldObfuscate:
+        for obf in obfuscations:
+            if re.search(obf[0], line) and not re.search("[\(\)]", line):
+                replacementFound = True
+                statistics["matches"] += 1
+                indent = copyIndentation(line)
+                writeLines(file, obf[1], indent, 'obfuscated')
+                if obf[2]:
+                    writeLines(file, [line], '', 'original')
+                else:
+                    statistics["linesRemoved"] += 1
+                writeLines(file, obf[3], indent, 'obfuscated')
+                statistics["linesAdded"] += len(obf[1]) + len(obf[3])
+                break
     if not replacementFound:
         file.write(f"{line}\n")  
 
