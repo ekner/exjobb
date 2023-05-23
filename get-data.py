@@ -2,15 +2,36 @@
 
 import sqlite3
 import csv
+import numpy
 
 originalData = {}
 
 csvfile = open("data.csv", 'w', newline='')
 csvWriter = csv.writer(csvfile, delimiter=',', quotechar='|', quoting=csv.QUOTE_MINIMAL)
-csvWriter.writerow(['obfuscation', 'convstop', 'raystop', 'certain', 'probable', 'unlikely', 'nominer', 'raytime',
-                        'linesadded', 'linesremoved',
-                        'newfilesize', 'matches', 'averagelinesdiff', 'averagesizediff', 'averageraytimediff',
-                        'avgmatchesshare'])
+csvWriter.writerow([
+    'obfuscation',
+    'convstop',
+    'raystop',
+    'certain',
+    'probable',
+    'unlikely',
+    'nominer',
+    'raytime',
+    'linesadded',
+    'linesremoved',
+    'newfilesize',
+    'matches',
+    'averagelinesdiff',
+    'averagesizediff',
+    'averageraytimediff',
+    'avgmatchesshare',
+    'std',
+    'per0',
+    'per10',
+    'per50',
+    'per90',
+    'per100'
+])
 
 def getOriginalData():
     dbCon = sqlite3.connect(f"saved-db/0.db")
@@ -54,6 +75,16 @@ def getFromDb(dbFile):
     res = dbCur.execute("SELECT AVG(matches * 1.0 / linesBefore) FROM data WHERE ray_status=2")
     data["avgmatchesshare"] = res.fetchone()[0]
 
+    res = dbCur.execute("SELECT matches * 1.0 / linesBefore FROM data WHERE ray_status=2")
+    res = res.fetchall()
+    res = list(map(lambda x : x[0] * 100, res))
+    data["std"]    = numpy.std(res)
+    data["per0"]   = numpy.percentile(res, 0)
+    data["per10"]  = numpy.percentile(res, 10)
+    data["per50"]  = numpy.percentile(res, 50)
+    data["per90"]  = numpy.percentile(res, 90)
+    data["per100"] = numpy.percentile(res, 100)
+
     # Calculate relative differences:
 
     res = dbCur.execute("SELECT AVG(linesBefore), AVG(oldFileSize) FROM data WHERE ray_status=2")
@@ -80,11 +111,38 @@ def getFromDb(dbFile):
     data["averagesizediff"] = str(round(data["averagesizediff"], 1)) + "\\%"
     data["averageraytimediff"] = str(round(data["averageraytimediff"], 1)) + "\\%"
     data["avgmatchesshare"] = str(round(data["avgmatchesshare"] * 100, 1)) + "\\%"
+    data["std"]    = str(round(data["std"   ], 3))
+    data["per0"]   = str(round(data["per0"  ], 1)) + "\\%"
+    data["per10"]  = str(round(data["per10" ], 1)) + "\\%"
+    data["per50"]  = str(round(data["per50" ], 1)) + "\\%"
+    data["per90"]  = str(round(data["per90" ], 1)) + "\\%"
+    data["per100"] = str(round(data["per100"], 1)) + "\\%"
 
     # Write data to csv:
-    csvWriter.writerow([obfName, data["convstop"], data["raystop"], data["certain"], data["probable"], data["unlikely"], data["nominer"], data["raytime"],
-                        data["linesadded"], data["linesremoved"], data["newfilesize"], data["matches"], data["averagelinesdiff"], data["averagesizediff"],
-                        data['averageraytimediff'], data['avgmatchesshare']])
+    csvWriter.writerow([
+        obfName,
+        data["convstop"],
+        data["raystop"],
+        data["certain"],
+        data["probable"],
+        data["unlikely"],
+        data["nominer"],
+        data["raytime"],
+        data["linesadded"],
+        data["linesremoved"],
+        data["newfilesize"],
+        data["matches"],
+        data["averagelinesdiff"],
+        data["averagesizediff"],
+        data['averageraytimediff'],
+        data['avgmatchesshare'],
+        data['std'],
+        data['per0'],
+        data['per10'],
+        data['per50'],
+        data['per90'],
+        data['per100']
+    ])
 
     dbCon.close()
 
@@ -136,15 +194,6 @@ lst = [
 
 for i in range(len(lst)):
     s = "s/s" + str(lst[i])
-    #getFromDb(s)
-
-getFromDb("d/d1_3div14")
-getFromDb("d/d2_3div14")
-getFromDb("d/d3_3div14")
-getFromDb("d/d4_3div14")
-getFromDb("o/o1_3div14")
-getFromDb("o/o2_3div14")
-getFromDb("o/o3_3div14")
-getFromDb("s/s1_1div2")
+    getFromDb(s)
 
 csvfile.close()

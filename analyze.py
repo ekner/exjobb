@@ -9,9 +9,9 @@ import json
 from obfuscator import obfuscateFile
 from pynput import keyboard
 
-# connect to db
-dbCon = sqlite3.connect("data.db")
-dbCur = dbCon.cursor()
+# connect to db later
+dbCon = False
+dbCur = False
 
 parserLocation = "/home/gustav/kod/miner-ray.github.io/Parser/parser.js"
 #samplesLocation = "/home/gustav/kod/dataset/filtered"
@@ -48,9 +48,6 @@ if args.max_count != None:
     MAX_COUNT = int(args.max_count)
 if args.id != None:
     ONLY_ID = args.id
-
-# Constants:
-obfuscations = ["s1"]
 
 # --------- #
 # FUNCTIONS #
@@ -123,7 +120,7 @@ def insertRayDataToDB(id, res):
     dbCur.execute('UPDATE data SET data=?, certain=?, probable=?, unlikely=? WHERE id=?', values)
     dbCon.commit()
 
-def obfuscate(watFilePath, id):
+def obfuscate(watFilePath, id, obfuscations, numerator):
     # Convert to wasm before obfuscation to get file size. We cannot read the original wasm file size because
     # it might be larger, so we have to go Wasm -> Wat -> Wasm first.
     res = runCmd(['wat2wasm', watFilePath], 20)
@@ -132,7 +129,7 @@ def obfuscate(watFilePath, id):
     dbCon.commit()
 
     # Perform the obfuscations:
-    stat = obfuscateFile(watFilePath, obfuscations)
+    stat = obfuscateFile(watFilePath, obfuscations, numerator)
     
     # Try to convert back to wasm:
     res = runCmd(['wat2wasm', watFilePath], 20)
@@ -149,7 +146,7 @@ def obfuscate(watFilePath, id):
                   [stat["linesAdded"], stat["linesRemoved"], stat["linesBefore"], stat["matches"], fileSize, id])
     dbCon.commit()
 
-def processFile(id):
+def processFile(id, obfuscations, numerator):
     dbEntry = dbCur.execute('SELECT * FROM data WHERE id=?', [id])
     res = dbEntry.fetchone()
 
@@ -183,7 +180,7 @@ def processFile(id):
     resFile.close()
 
     # Perform obfuscation (if it should be performed):
-    obfuscate(watFilePath, id)
+    obfuscate(watFilePath, id, obfuscations, numerator)
 
     # Now, do the ray parsing:
     (resStatus, t, data) = runCmd(['node', parserLocation, '-f', watFilePath], RAY_TIMEOUT)
@@ -222,39 +219,69 @@ def handler(key):
 # MAIN CODE
 #
 
+stopLoop = False
+
 listener = keyboard.Listener(on_press=handler)
 listener.start()
 
-createTable()
+#if ONLY_ID != None:
+    #print('Processing individual file...')
+    #processFile(ONLY_ID)
+    #exit(0)
 
-if ONLY_ID != None:
-    print('Processing individual file...')
-    processFile(ONLY_ID)
-    exit(0)
+# De jag kört: 
+'''
+d1__1,2,3,4,5,6,7
+o1__1,2,3,4,5,6,7
+s1__1,2,3,4,5,6,7
+'''
 
-i = 0
-fileIndex = 0
-stopLoop = False
+# Constants:
+obfuscations = ["d1", "o1", "s1"]
+numerators = [0.5, 0, 8, 9, 10, 11, 12, 13, 14]
 
-for sampleFilename in os.listdir(samplesLocation):
-    sampleFile = os.path.join(samplesLocation, sampleFilename)
+for numerator in numerators:
+    for obfusc in obfuscations:
+        if numerator > 6 and obfusc == "s1":
+            continue
 
-    if not os.path.isfile(sampleFile):
-        continue
+        print("\n")
+        print(f"Now performing {obfusc} with num {numerator}")
+        print("\n")
 
-    fileIndex += 1
+        dbCon = sqlite3.connect(f"db-plot/{obfusc}/{numerator}.db")
+        dbCur = dbCon.cursor()
 
-    id = os.path.splitext(sampleFilename)[0]
+        createTable()
 
-    print(f"File: {fileIndex}, Scanned: {i}, Name: {id}")
+        i = 0
+        fileIndex = 0
 
-    processFile(id)
+        for sampleFilename in os.listdir(samplesLocation):
+            sampleFile = os.path.join(samplesLocation, sampleFilename)
 
-    i += 1
+            if not os.path.isfile(sampleFile):
+                continue
 
-    if MAX_COUNT > 0 and i >= MAX_COUNT:
-        print("Stopped because max-count was reached")
-        break
+            fileIndex += 1
+
+            id = os.path.splitext(sampleFilename)[0]
+
+            print(f"File: {fileIndex}, Scanned: {i}, Name: {id}")
+
+            processFile(id, [obfusc], numerator)
+
+            i += 1
+
+            if MAX_COUNT > 0 and i >= MAX_COUNT:
+                print("Stopped because max-count was reached")
+                break
+            if stopLoop:
+                print("Stopped because Esc was pressed")
+                break
+        dbCon.close()
+
+        if stopLoop:
+            break
     if stopLoop:
-        print("Stopped because Esc was pressed")
-        break
+            break

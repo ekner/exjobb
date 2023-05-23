@@ -8,6 +8,8 @@ originalData = {}
 x = [] # Matches share
 y = [] # No miner
 
+# print("x,y")
+
 def getOriginalData():
     dbCon = sqlite3.connect(f"saved-db/0.db")
     dbCur = dbCon.cursor()
@@ -17,7 +19,7 @@ def getOriginalData():
 def getFromDb(dbFile):
     data = {}
 
-    dbCon = sqlite3.connect(f"saved-db/{dbFile}.db")
+    dbCon = sqlite3.connect(f"{dbFile}.db")
     dbCur = dbCon.cursor()
 
     res = dbCur.execute("SELECT COUNT(id) as cnt FROM data WHERE certain > 0")
@@ -60,7 +62,11 @@ def getFromDb(dbFile):
     x.append(data["avgmatchesshare"])
     y.append(data["nominer"])
 
+    #print(f"{data['avgmatchesshare']}, {data['nominer']}")
+
 getOriginalData()
+
+'''
 
 getFromDb("d/d1")
 getFromDb("d/d2")
@@ -74,7 +80,7 @@ getFromDb("s/s2")
 getFromDb("s/s3")
 getFromDb("s/s4")
 getFromDb("s/s5")
-plt.plot(x, y, 'rx')
+#plt.plot(x, y, 'rx')
 
 lst = [
     12,
@@ -109,12 +115,16 @@ y = []
 for i in range(len(lst)):
     s = "s/s" + str(lst[i])
     getFromDb(s)
-plt.plot(x, y, 'rx')
+#plt.plot(x, y, 'rx')
+
+print("")
 
 x = []
 y = []
 getFromDb("s/s2345")
-plt.plot(x, y, 'ro')
+#plt.plot(x, y, 'ro')
+
+print("")
 
 x = []
 y = []
@@ -122,25 +132,41 @@ getFromDb("d/d1_3div14")
 getFromDb("d/d2_3div14")
 getFromDb("d/d3_3div14")
 getFromDb("d/d4_3div14")
-plt.plot(x, y, 'bx')
+#lt.plot(x, y, 'bx')
 
 x = []
 y = []
 getFromDb("o/o1_3div14")
 getFromDb("o/o2_3div14")
 getFromDb("o/o3_3div14")
-plt.plot(x, y, 'bx')
+#plt.plot(x, y, 'bx')
 
 x = []
 y = []
 getFromDb("s/s1_1div2")
-plt.plot(x, y, 'bx')
+#plt.plot(x, y, 'bx')
+'''
+
+numerators = [1,2,3,4,5,6,7]
+obfuscations = ["d1", "o1", "s1"]
+colors = ["r", "b", "g"]
+
+i = 0
+for obf in obfuscations:
+    x = []
+    y = []
+    for num in numerators:
+        getFromDb(f"db-plot/{obf}/{num}")
+    color = colors[i]
+    plt.plot(x, y, f'-{color}x')
+    i += 1
+
 
 plt.xlabel("Match ratio (%)")
 plt.ylabel("\"None\" category")
 
 plt.axis([0, 15, 0, 223])
-#plt.show()
+plt.show()
 
 plt.savefig(f'matches-plot.pdf')
 plt.figure().clear()

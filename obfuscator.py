@@ -553,13 +553,20 @@ def strToObf(s):
     return list(functools.reduce(lambda acc, x: acc + subMap[obfType + x], numbers, []))
 
 # Perform obfuscation for a certain LINE in a file:
-def performObfuscation(line, file, obfuscation, statistics):
+def performObfuscation(line, file, obfuscation, statistics, numerator):
     replacementFound = False
+
+    denominator = 1.0
+    
+    if obfuscation[0] == "s":
+        denominator = 6.0
+    else:
+        denominator = 14.0
+
     obfuscations = strToObf(obfuscation)
 
     random.seed(datetime.now().timestamp())
-    #shouldObfuscate = random.random() < 3.0 / 14.0
-    shouldObfuscate = random.random() < 1.0 / 2.0
+    shouldObfuscate = random.random() < numerator / denominator
     #print(f"Should obfuscate: {shouldObfuscate}")
 
     if shouldObfuscate:
@@ -580,7 +587,7 @@ def performObfuscation(line, file, obfuscation, statistics):
         file.write(f"{line}\n")  
 
 # Perform obfuscation/s for a whole file:
-def obfuscateFile(inOutFile, obfuscations):
+def obfuscateFile(inOutFile, obfuscations, numerator):
     statistics = {
         "linesRemoved": 0,
         "linesAdded": 0,
@@ -599,6 +606,6 @@ def obfuscateFile(inOutFile, obfuscations):
 
         with open(inOutFile, "w") as file:
             for line in lines:
-                performObfuscation(line, file, obfuscation, statistics)
+                performObfuscation(line, file, obfuscation, statistics, numerator)
     
     return statistics
