@@ -26,11 +26,11 @@ csvWriter.writerow([
     'averageraytimediff',
     'avgmatchesshare',
     'std',
-    'per0',
-    'per10',
-    'per50',
-    'per90',
-    'per100'
+    'pera',
+    'perb',
+    'perc',
+    'perd',
+    'pere'
 ])
 
 def getOriginalData():
@@ -99,7 +99,7 @@ def getFromDb(dbFile):
     # Do final tweaks to the data:
     obfName = "$" + dbFile + "$"
     if len(dbFile) > 1:
-        obfName = "$" + dbFile[2].upper() + "_{" + dbFile[3] + "}$"
+        obfName = "$" + dbFile[2].upper() + "_{" + dbFile[3:] + "}$"
     data["raytime"] = str(round(data["raytime"] * 1000)) + " ms"
     if len(data["raytime"]) == 7:
         data["raytime"] = data["raytime"][0] + " " + data["raytime"][1:]
@@ -111,7 +111,7 @@ def getFromDb(dbFile):
     data["averagesizediff"] = str(round(data["averagesizediff"], 1)) + "\\%"
     data["averageraytimediff"] = str(round(data["averageraytimediff"], 1)) + "\\%"
     data["avgmatchesshare"] = str(round(data["avgmatchesshare"] * 100, 1)) + "\\%"
-    data["std"]    = str(round(data["std"   ], 3))
+    data["std"]    = str(round(data["std"   ], 1)) + "\\%"
     data["per0"]   = str(round(data["per0"  ], 1)) + "\\%"
     data["per10"]  = str(round(data["per10" ], 1)) + "\\%"
     data["per50"]  = str(round(data["per50" ], 1)) + "\\%"
@@ -148,7 +148,7 @@ def getFromDb(dbFile):
 
 getOriginalData()
 
-'''
+#'''
 getFromDb("d/d1")
 getFromDb("d/d2")
 getFromDb("d/d3")
@@ -161,7 +161,7 @@ getFromDb("s/s2")
 getFromDb("s/s3")
 getFromDb("s/s4")
 getFromDb("s/s5")
-'''
+#'''
 
 lst = [
     12,
@@ -194,6 +194,6 @@ lst = [
 
 for i in range(len(lst)):
     s = "s/s" + str(lst[i])
-    getFromDb(s)
+    #getFromDb(s)
 
 csvfile.close()

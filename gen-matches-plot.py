@@ -31,7 +31,7 @@ def getFromDb(dbFile):
     res = dbCur.execute("SELECT COUNT(id) as cnt FROM data WHERE certain = 0 AND probable = 0 AND unlikely > 0")
     data["unlikely"] = res.fetchone()[0]
 
-    res = dbCur.execute("SELECT COUNT(id) as cnt FROM data WHERE certain = 0 AND probable = 0 AND unlikely = 0")
+    res = dbCur.execute("SELECT COUNT(id) as cnt FROM data WHERE certain = 0 AND probable = 0 AND unlikely = 0 AND ray_status = 2")
     data["nominer"] = res.fetchone()[0]
 
     res = dbCur.execute("SELECT AVG(ray_time), AVG(linesAdded), AVG(linesRemoved), AVG(newFileSize), AVG(matches) FROM data WHERE ray_status=2")
@@ -147,7 +147,7 @@ getFromDb("s/s1_1div2")
 #plt.plot(x, y, 'bx')
 '''
 
-numerators = [1,2,3,4,5,6,7]
+numerators = [0,0.5,1,2,3,4,5,6,7,8,9,10,11,12,13,14]
 obfuscations = ["d1", "o1", "s1"]
 colors = ["r", "b", "g"]
 
@@ -156,6 +156,8 @@ for obf in obfuscations:
     x = []
     y = []
     for num in numerators:
+        if num > 6 and obf == "s1":
+            continue
         getFromDb(f"db-plot/{obf}/{num}")
     color = colors[i]
     plt.plot(x, y, f'-{color}x')
@@ -164,9 +166,9 @@ for obf in obfuscations:
 
 plt.xlabel("Match ratio (%)")
 plt.ylabel("\"None\" category")
-
 plt.axis([0, 15, 0, 223])
-plt.show()
+plt.legend(labels=["$D_1$", "$O_1$", "$S_1$"])
 
+#plt.show()
 plt.savefig(f'matches-plot.pdf')
 plt.figure().clear()
